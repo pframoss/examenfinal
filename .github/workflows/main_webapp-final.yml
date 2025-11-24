@@ -1,0 +1,53 @@
+# Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
+# More GitHub Actions for Azure: https://github.com/Azure/actions
+
+name: Build and deploy container app to Azure Web App - webapp-final
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read #This is required for actions/checkout
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Log in to container registry
+        uses: docker/login-action@v2
+        with:
+          registry: ctnexamenfinal.azurecr.io/
+          username: ${{ secrets.AZUREAPPSERVICE_CONTAINERUSERNAME_8C63877397B84E1C841F2D692973AA7C }}
+          password: ${{ secrets.AZUREAPPSERVICE_CONTAINERPASSWORD_27B65A75564240BD8DC1B0D0C1F92D54 }}
+
+      - name: Build and push container image to registry
+        uses: docker/build-push-action@v3
+        with:
+          context: .
+          push: true
+          tags: ctnexamenfinal.azurecr.io/${{ secrets.AZUREAPPSERVICE_CONTAINERUSERNAME_8C63877397B84E1C841F2D692973AA7C }}/nombre:${{ github.sha }}
+          file: ./Dockerfile
+
+  deploy:
+    runs-on: ubuntu-latest
+    
+    needs: build
+    
+    steps:
+      
+      - name: Deploy to Azure Web App
+        id: deploy-to-webapp
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: 'webapp-final'
+          slot-name: 'Production'
+          images: 'ctnexamenfinal.azurecr.io/${{ secrets.AZUREAPPSERVICE_CONTAINERUSERNAME_8C63877397B84E1C841F2D692973AA7C }}/nombre:${{ github.sha }}'
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_F966E8E070C6416CA7B022D44247D82C }}
